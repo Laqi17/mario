@@ -5,6 +5,7 @@ import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.opengl.GL;
 
 
+import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.system.MemoryUtil.NULL;
@@ -14,12 +15,19 @@ public class Window {
     private String title;
     private long glfwWindow;
 
+    private float r, g, b, a;
+    private boolean fadeToBlack = false;
+
     private static Window window = null;
 
     private Window() {
         this.width  = 1920;
         this.height = 1080;
         this.title = "Mario";
+        r = 2;
+        g = 3;
+        b = 4;
+        a = 5;
     }
 
     public static Window get() {
@@ -35,6 +43,14 @@ public class Window {
 
         init();
         loop();
+
+        //free the memory
+        glfwFreeCallbacks(glfwWindow);
+        glfwDestroyWindow(glfwWindow);
+
+        // Terminate GLFW and free the error callback
+        glfwTerminate();
+        glfwSetErrorCallback(null).free();
     }
 
     public void init() {
@@ -54,10 +70,14 @@ public class Window {
 
         // Create the window
         glfwWindow = glfwCreateWindow(this.width, this.height, this.title, NULL, NULL);
-
         if (glfwWindow == NULL) {
             throw new IllegalStateException("Failed to create the GLFW window.");
         }
+
+        glfwSetCursorPosCallback(glfwWindow, MouseListener::mousePosCallback);
+        glfwSetMouseButtonCallback(glfwWindow, MouseListener::mouseButtonCallback);
+        glfwSetScrollCallback(glfwWindow, MouseListener::mouseScrollCallback);
+        glfwSetKeyCallback(glfwWindow, KeyListener::keyCallback);
 
         // Make the Opengl  context current
         glfwMakeContextCurrent(glfwWindow);
@@ -66,8 +86,6 @@ public class Window {
 
         // Make the window  visible
         glfwShowWindow(glfwWindow);
-
-
 
     }
 
@@ -83,8 +101,19 @@ public class Window {
             // Poll events
             glfwPollEvents();
 
-            glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+            glClearColor(r, g, b, a);
             glClear(GL_COLOR_BUFFER_BIT);
+
+            if (fadeToBlack) {
+                r = Math.max(r - 0.01f, 0);
+                g = Math.max(g - 0.01f, 0);
+                b = Math.max(b - 0.01f, 0);
+            }
+
+            if (KeyListener.isKeyPressed(GLFW_KEY_SPACE)) {
+                fadeToBlack = true;
+            }
+
 
             glfwSwapBuffers(glfwWindow);
 
